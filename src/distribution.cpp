@@ -4,15 +4,20 @@
 
 Distribution::Distribution(const int numSpecies)
 {
-    // Values specific for the number of species and ratio=2.219.
+    // Values specific for the number of species and ratio=2.219. this number is the ratio between the two set of the particles' radius
     // Can be calculated using discrete_polydisperse.nb.
+    //sigmaMax =  3.00001;
+    //sigmaMin =  2.829999;
+    //a =         1.520820513;
+    //b =         sigmaMin;   # these are for 2080 mixture
+    //c =         1.540296078;
     if(numSpecies==2)
     {
-        sigmaMax =  2.01323;
-        sigmaMin =  0.907267;
-        a =         0.684184;
+        sigmaMax =  3.00001;
+        sigmaMin =  2.829999;
+        a =         1.520820513;
         b =         sigmaMin;
-        c =         1.10596;
+        c =         1.540296078;
     }
     else if(numSpecies==3)
     {

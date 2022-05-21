@@ -15,6 +15,8 @@ private:
 
     double temperatureFixed;
 
+    double maxdV;
+
     double maxTranslationDistanceInLengthUnits;
 
     double swapProbability;
@@ -40,6 +42,8 @@ public:
     long long int GetNumIterations() const;
 
     double GetNumDensity() const;
+
+    double GetmaxdV() const;
 
     int GetNumSpecies() const;
     int GetRandomSeed() const;

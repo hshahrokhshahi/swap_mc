@@ -14,9 +14,12 @@ private:
     // Member variables
     const int numSpheres;
     const double temperatureFixed;
-    const double numDensity;
-    const double volumeBox;
-    const double lengthBox;
+//    const double numDensity;
+    double numDensity;
+//    const double volumeBox;
+    double volumeBox;
+//    const double lengthBox;
+    double lengthBox;
 
     double maxTranslationDistance;
 
@@ -33,6 +36,7 @@ private:
     std::uniform_real_distribution<double> randomDouble;
     std::uniform_real_distribution<double> randomPosNegDouble;
     std::uniform_int_distribution<int> randomParticle;
+    const double maxdV;
 
 public:
     // Constructor

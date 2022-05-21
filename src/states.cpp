@@ -9,7 +9,7 @@
 #include "states.h"
 
 States::States(const std::string _statesFile, const int _numSpheres)
-    : statesFile(_statesFile), numSpheres(_numSpheres)
+        : statesFile(_statesFile), numSpheres(_numSpheres)
 {
 }
 

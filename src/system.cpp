@@ -6,7 +6,6 @@
 #include <cassert>
 #include <algorithm>
 #include <string>
-
 #include "timer.h"
 #include "system.h"
 #include "config.h"
@@ -14,16 +13,17 @@
 #include "distribution.h"
 
 System::System(const Config& config, const bool usePreviousStates, std::string previousPath)
-    :   numSpheres(config.GetNumSpheres()),
-        spheres(numSpheres),
-        temperatureFixed(config.GetTemperatureFixed()),
-        numDensity(config.GetNumDensity()),
-        volumeBox(numSpheres/numDensity),
-        lengthBox(cbrt(volumeBox)),
-        mersenneTwister(config.GetRandomSeed()),
-        randomDouble(0,1),
-        randomPosNegDouble(-1,1),
-        randomParticle(0,numSpheres-1)
+        :   numSpheres(config.GetNumSpheres()),
+            spheres(numSpheres),
+            temperatureFixed(config.GetTemperatureFixed()),
+            numDensity(config.GetNumDensity()),
+            volumeBox(numSpheres/numDensity),
+            lengthBox(cbrt(volumeBox)),
+            mersenneTwister(config.GetRandomSeed()),
+            randomDouble(0,1),
+            randomPosNegDouble(-1,1),
+            randomParticle(0,numSpheres-1),
+            maxdV(config.GetmaxdV())
 {
     Timer timer;
 
@@ -37,7 +37,6 @@ System::System(const Config& config, const bool usePreviousStates, std::string p
             break;
         }
     }
-
     double lengthUnit = lengthBox/numSpheres1D;
 
     maxTranslationDistance = config.GetMaxTranslationDistanceInLengthUnits() * lengthUnit;
@@ -144,7 +143,7 @@ void System::AttemptTranslation()
 {
     int randomParticleIndex = ChooseRandomParticle();
     double energy = CalculateEnergy(randomParticleIndex, spheres[randomParticleIndex]);
-
+//
     Sphere newSphere = spheres[randomParticleIndex];
     newSphere.position.x += maxTranslationDistance*randomPosNegDouble(mersenneTwister);
     newSphere.position.y += maxTranslationDistance*randomPosNegDouble(mersenneTwister);
@@ -154,7 +153,7 @@ void System::AttemptTranslation()
     double energyDifference = energyNew - energy;
 
     double acceptProbability = std::min(1.0,
-                    std::exp(-energyDifference/(boltzmannConstant * temperatureFixed)));
+                                        std::exp(-energyDifference/(boltzmannConstant * temperatureFixed)));
 
     if(IsChosenWithProbability(acceptProbability))
     {
@@ -166,41 +165,43 @@ void System::AttemptTranslation()
 
 void System::AttemptSwap()
 {
-    // Choose two DIFFERENT particles randomly
-    int randomParticleIndex1 = ChooseRandomParticle();
-    int randomParticleIndex2;
-    do
-    {
-        randomParticleIndex2 = ChooseRandomParticle();
+    double p = 7.23;
+    double energyOld = GetTotalEnergy();
+    double v_old = volumeBox;
+    double l_old = lengthBox;
+    double dv = maxdV * randomPosNegDouble(mersenneTwister);
+    volumeBox += dv;
+    lengthBox = pow(volumeBox, 0.333);
+    double l_coef = pow(dv, 0.333);
+//    std::cout << dv << "-" << l_coef << std::endl;
+    for(int i = 0; i < numSpheres; ++i){
+        spheres[i].position.x *= lengthBox / l_old;
+        spheres[i].position.y *= lengthBox / l_old;
+        spheres[i].position.z *= lengthBox / l_old;
     }
-    while((randomParticleIndex1 == randomParticleIndex2)
-            ||
-            (spheres[randomParticleIndex1].radius==spheres[randomParticleIndex2].radius));
-
-    double energy = CalculateEnergy(randomParticleIndex1, spheres[randomParticleIndex1])
-                        +CalculateEnergy(randomParticleIndex2, spheres[randomParticleIndex2]);
-
-    Sphere newSphere1 = spheres[randomParticleIndex1];
-    newSphere1.radius = spheres[randomParticleIndex2].radius;
-
-    Sphere newSphere2 = spheres[randomParticleIndex2];
-    newSphere2.radius = spheres[randomParticleIndex1].radius;
-
-    double energyNew = CalculateEnergy(randomParticleIndex1, newSphere1)
-                        +CalculateEnergy(randomParticleIndex2, newSphere2);
-
-    double energyDifference = energyNew - energy;
-
-    double acceptProbability = std::min(1.0,
-                    std::exp(-energyDifference/(boltzmannConstant * temperatureFixed)));
-
-    if(IsChosenWithProbability(acceptProbability))
-    {
-        spheres[randomParticleIndex1] = newSphere1;
-        spheres[randomParticleIndex2] = newSphere2;
-
-        ++acceptedSwaps;
+    double energyNew = GetTotalEnergy();
+    double dU = energyNew - energyOld;
+    double weight = std::exp(-(dU + p * dv - numSpheres*temperatureFixed*std::log(volumeBox/v_old))/temperatureFixed);
+    if(weight < 1) {
+        double x = (randomPosNegDouble(mersenneTwister) + 1) / 2;
+        if (weight < x) {
+            volumeBox -= dv;
+            l_old = lengthBox;
+            lengthBox = pow(volumeBox, 0.333);
+            for (int i = 0; i < numSpheres; ++i) {
+                spheres[i].position.x *= lengthBox / l_old;
+                spheres[i].position.y *= lengthBox / l_old;
+                spheres[i].position.z *= lengthBox / l_old;
+            }
+        } else {
+            acceptedSwaps++;
+        }
     }
+    else{
+        acceptedSwaps++;
+    }
+
+
 }
 
 int System::ChooseRandomParticle()
@@ -216,8 +217,18 @@ double System::CalculateEnergy(const int index, const Sphere& sphere)
     {
         if(i!=index)
         {
+//            if(sphere.radius + spheres[i].radius == 0.907268){
+//                type = 1;
+//            }
+//            else if(sphere.radius + spheres[i].radius == 1.460254){
+//                type = 2;
+//            }else if(sphere.radius + spheres[i].radius == 2.01324){
+//                type = 3;
+//            }else{
+//                std::cout << "hahahaha" << std::endl;
+//            }
             energy += PotentialSRPP(RadiusSumOf(sphere,spheres[i]),
-                DistanceBetween(sphere,spheres[i]));
+                                    DistanceBetween(sphere,spheres[i]));
         }
     }
     return energy;
@@ -226,24 +237,49 @@ double System::CalculateEnergy(const int index, const Sphere& sphere)
 double System::PotentialSRPP(const double sigmaSummedRadius, const double distanceBetweenSpheres) const
 {
     double potential;
+//    std::cout << sigmaSummedRadius << std::endl;
     const double cutOffDistance = 1.25 * sigmaSummedRadius;
     if(distanceBetweenSpheres > cutOffDistance)
     {
         potential = 0;
+        return potential;
     }
-    else
-    {
+
+    else {
+        if (sigmaSummedRadius < 2.95) {
+            const double sigma = 1.414;
+            const double epsilon = 0.23852;;
+            potential = 4 * epsilon * (pow(sigma / distanceBetweenSpheres, 12) -
+                                       pow(sigma / distanceBetweenSpheres, 6));  // we have added this potential
+            return potential;
+        } else if (sigmaSummedRadius < 2.99) {
+            const double sigma = 1.0;
+            const double epsilon = 0.23852;;
+            potential = 4 * epsilon * (pow(sigma / distanceBetweenSpheres, 12) -
+                                       pow(sigma / distanceBetweenSpheres, 6));  // we have added this potential
+            return potential;
+
+        } else {
+            const double sigma = 1.414;
+            const double epsilon = 0.23852;
+            potential = 4 * epsilon * (pow(sigma / distanceBetweenSpheres, 12) -
+                                       pow(sigma / distanceBetweenSpheres, 6));  // we have added this potential
+            return potential;
+        }
+    }
         const int n = 12;
         const double c0 = -1.92415;
         const double c2 = 2.11106;
         const double c4 = -0.591097;
-
-        potential = pow((sigmaSummedRadius/distanceBetweenSpheres),n)
-                        + c4 * pow((distanceBetweenSpheres/sigmaSummedRadius),4)
-                        + c2 * pow((distanceBetweenSpheres/sigmaSummedRadius),2)
-                        + c0;
-    }
-    return potential;
+//        const double sigma = 1.0;
+//        const double epsilon = 1.0;
+//        potential = 4 * epsilon * (pow(sigma/distanceBetweenSpheres, 12) - pow(sigma/distanceBetweenSpheres, 6));  // we have added this potential
+////        potential = pow((sigmaSummedRadius/distanceBetweenSpheres),n)
+////                    + c4 * pow((distanceBetweenSpheres/sigmaSummedRadius),4)
+////                    + c2 * pow((distanceBetweenSpheres/sigmaSummedRadius),2)
+////                    + c0;
+//    }
+//    return potential;
 }
 
 double System::RadiusSumOf(const Sphere& sphere1, const Sphere& sphere2) const
@@ -251,7 +287,7 @@ double System::RadiusSumOf(const Sphere& sphere1, const Sphere& sphere2) const
     double nonAdditivityConstant = 0.2;
 
     return (sphere1.radius + sphere2.radius)*
-        (1 - 2*nonAdditivityConstant*abs(sphere1.radius - sphere2.radius));
+           (1 - 2*nonAdditivityConstant*abs(sphere1.radius - sphere2.radius));
 }
 
 double System::DistanceBetween(const Sphere& sphere1, const Sphere& sphere2)
@@ -332,7 +368,7 @@ double System::GetTotalEnergy()
         for(int j=i+1; j < numSpheres; ++j)
         {
             energy += PotentialSRPP(RadiusSumOf(spheres[i],spheres[j]),
-                    DistanceBetween(spheres[i],spheres[j]));
+                                    DistanceBetween(spheres[i],spheres[j]));
         }
     }
     return energy;
