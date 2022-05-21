@@ -1,3 +1,7 @@
+//
+// Created by hshah on 4/7/2021.
+//
+
 #define NDEBUG
 
 #include <iostream>
@@ -26,6 +30,7 @@ Config::Config(const std::string _configFile) : configFile(_configFile)
 
     std::string numSpeciesString;
     std::string randomSeedString;
+    std::string stmaxdV;
 
     // Read contents of config file and assigns it to the corresponding member variables.
     if (inFile.is_open())
@@ -72,6 +77,9 @@ Config::Config(const std::string _configFile) : configFile(_configFile)
             {
                 randomSeedString = value;
             }
+            else if(name=="maxdV"){
+                stmaxdV = value;
+            }
         }
     }
     numSpheres = std::stoi(numSpheresString);
@@ -100,6 +108,7 @@ Config::Config(const std::string _configFile) : configFile(_configFile)
     numIterations = std::stoll(numIterationsString);
     numSpecies = std::stoi(numSpeciesString);
     randomSeed = std::stoi(randomSeedString);
+    maxdV = std::stod(stmaxdV);
 }
 
 int Config::GetNumSpheres() const
@@ -133,4 +142,8 @@ int Config::GetNumSpecies() const
 int Config::GetRandomSeed() const
 {
     return randomSeed;
+}
+double Config::GetmaxdV() const
+{
+    return maxdV;
 }

@@ -12,8 +12,8 @@ void ClearContents(const std::string& filePath)
 }
 
 void Export2D(const std::vector<std::vector<double>> &vector2D,
-        const std::string& filePath,
-        const long long int iteration)
+              const std::string& filePath,
+              const long long int iteration)
 {
     int vectorSize = vector2D[0].size();
     std::ofstream outFile(filePath, std::ios_base::app);

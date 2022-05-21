@@ -1,0 +1,9 @@
+numIterations = 3000000000
+numSpheres = 512
+numDensity = 0.5
+temperatureFixed = 3.5
+maxTranslationDistanceInLengthUnits = 0.14878
+swapProbability = 0.001
+numSpecies = 2
+randomSeed = 1
+maxdV = 0.03
